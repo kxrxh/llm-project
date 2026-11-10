@@ -22,23 +22,35 @@ SYSTEM_PROMPT = """Извлеки все сущности и связи из ч�
 Используй только факты чанка и названия из словаря. Факты примера не переноси.
 Нормализуй коды: ar 210 -> AR-210, Е-17 -> E-17.
 
-HAS_PART: модель содержит деталь. IS_A: деталь относится к виду узла.
+Модель оборудования (Model) и линейка (ProductLine) — разные сущности.
+HAS_PART связывает модель с артикулом детали (Part), а IS_A — деталь с видом узла (Component).
+Для каждой строки состава сохрани обе связи и SUPPLIED_BY, если указан поставщик.
 INDICATES: ошибка указывает на узел. FIXED_BY: ошибка устраняется по регламенту.
 FAILED: отказ узла в модели из отчёта о выезде.
 REPLACED_BY: снятая деталь -> новая; обычный ремонт узла этой связи не создаёт.
 Укажи IS_A для обеих деталей замены, если у них один вид узла.
 Если связей схемы нет, верни пустые массивы.
 
-Пример текста: «Деталь P-1234 (компрессор) снята с производства.
-Вместо неё устанавливается P-1234B».
+Пример текста: «Модель AR-123 входит в линейку Арктика.
+В ней установлен компрессор — деталь P-1234, поставщик КомпрессорМаш.
+Деталь P-1234 снята с производства. Вместо неё устанавливается P-1234B».
 Пример ответа:
-{"entities": [{"type": "Part", "name": "P-1234"},
+{"entities": [{"type": "Model", "name": "AR-123"},
+              {"type": "ProductLine", "name": "Арктика"},
+              {"type": "Part", "name": "P-1234"},
               {"type": "Part", "name": "P-1234B"},
-              {"type": "Component", "name": "компрессор"}],
- "relations": [{"subject_type": "Part", "subject": "P-1234", "type": "REPLACED_BY",
-                "object_type": "Part", "object": "P-1234B"},
+              {"type": "Component", "name": "компрессор"},
+              {"type": "Supplier", "name": "КомпрессорМаш"}],
+ "relations": [{"subject_type": "Model", "subject": "AR-123", "type": "BELONGS_TO",
+                "object_type": "ProductLine", "object": "Арктика"},
+               {"subject_type": "Model", "subject": "AR-123", "type": "HAS_PART",
+                "object_type": "Part", "object": "P-1234"},
                {"subject_type": "Part", "subject": "P-1234", "type": "IS_A",
                 "object_type": "Component", "object": "компрессор"},
+               {"subject_type": "Part", "subject": "P-1234", "type": "SUPPLIED_BY",
+                "object_type": "Supplier", "object": "КомпрессорМаш"},
+               {"subject_type": "Part", "subject": "P-1234", "type": "REPLACED_BY",
+                "object_type": "Part", "object": "P-1234B"},
                {"subject_type": "Part", "subject": "P-1234B", "type": "IS_A",
                 "object_type": "Component", "object": "компрессор"}]}
 """
