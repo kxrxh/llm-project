@@ -53,11 +53,11 @@ def local_search(question: str, kb: KnowledgeBase, llm: LLMClient) -> Answer:
         return Answer(NOT_FOUND, refused=True)
 
     graph = kb.graph
+    lowered = question.casefold()
+    include_suppliers = "поставщик" in lowered or "поставля" in lowered
     if len(anchors) == 1:
         edges = _neighborhood_edges(graph, anchors[0])
     else:
-        lowered = question.casefold()
-        include_suppliers = "поставщик" in lowered or "поставля" in lowered
         edges = _edges_between_anchors(graph, anchors, include_suppliers)
 
     facts: list[str] = []
@@ -81,9 +81,15 @@ def local_search(question: str, kb: KnowledgeBase, llm: LLMClient) -> Answer:
         return Answer(NOT_FOUND, refused=True)
 
     context = "\n".join(numbered_facts)
+    system_prompt = LOCAL_PROMPT
+    if include_suppliers:
+        system_prompt += (
+            " В ответе о поставщике укажи точную пару «артикул — поставщик»"
+            " из соответствующего факта SUPPLIED_BY."
+        )
     response = llm.chat(
         [
-            {"role": "system", "content": LOCAL_PROMPT},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": f"Факты:\n{context}\n\nВопрос: {question}"},
         ]
     )
